@@ -3,6 +3,7 @@ import numpy as np
 import requests
 import time
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 from rdkit.Chem import AllChem
 from rdkit.Chem import MolFromSmiles
@@ -17,12 +18,14 @@ def get_smiles(drug_name: str) -> str | None:
     """
 
     # SMILES encodings can be found in this URL in PubChem's website
-    url = f'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{drug_name}/property/CanonicalSMILES/TXT'
+    url = f'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{drug_name}/property/CanonicalSMILES/json'
     # Send a GET request to the server and get the SMILES
-    pubchem_response = requests.get(url).text
+    pubchem_response = requests.get(url)
 
-    if 'Status: 404' in pubchem_response:
+    if pubchem_response.status_code == 404:
         return None
+
+    pubchem_response = pubchem_response.json()['PropertyTable']['Properties'][0]['CanonicalSMILES']
 
     # Remove newlines and spaces from SMILES string
     pubchem_response = pubchem_response.replace('\n', '')
