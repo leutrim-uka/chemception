@@ -1,12 +1,8 @@
-import pandas as pd
-import numpy as np
-import requests
 import time
-from tqdm import tqdm
-import matplotlib.pyplot as plt
-
-from rdkit.Chem import AllChem
+import pandas as pd
+import requests
 from rdkit.Chem import MolFromSmiles
+from tqdm import tqdm
 
 
 def get_smiles(drug_name: str) -> str | None:

@@ -2,7 +2,6 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 
 def chemcepterize_mol(mol: Chem.Mol, embed: float = 20.0, res: float = 0.5) -> np.ndarray:
