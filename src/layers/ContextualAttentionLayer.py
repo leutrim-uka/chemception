@@ -8,12 +8,18 @@ class ContextualAttentionLayer(nn.Module):
     Inspired by Bahdanau attention. Each token of a SMILES
     targets the genes in a specific way.
     """
+
     def __init__(self, attention_size):
         super(ContextualAttentionLayer, self).__init__()
 
         self.attention_size = attention_size
 
-    def forward(self, genes, smiles, reduce_sequence=True, return_alphas=True):
+    def forward(self,
+                genes: torch.Tensor,
+                smiles: torch.Tensor,
+                reduce_sequence: bool = True,
+                return_alphas: bool = True) -> (torch.Tensor, torch.Tensor) | torch.Tensor:
+
         genes = torch.unsqueeze(genes, 2) if len(genes.shape) == 2 else genes
         hidden_size = smiles.size(2)
         num_genes = genes.size(1)
@@ -43,7 +49,7 @@ class ContextualAttentionLayer(nn.Module):
 
         output = (
             torch.sum(smiles * torch.unsqueeze(alphas, -1), dim=1)
-            if reduce_sequence == True
+            if reduce_sequence is True
             else smiles * torch.unsqueeze(alphas, -1)
         )
 
@@ -51,5 +57,3 @@ class ContextualAttentionLayer(nn.Module):
             return output, alphas
         else:
             return output
-
-
