@@ -5,7 +5,7 @@ from torch.nn import LazyLinear
 
 
 class DenseAttentionLayer(nn.Module):
-    def __init__(self, inputs, return_alphas=False):
+    def __init__(self, return_alphas=False):
         super(DenseAttentionLayer, self).__init__()
         self.return_alphas = return_alphas
 

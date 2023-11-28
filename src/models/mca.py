@@ -1,7 +1,10 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from utils import embed_tokens, contextual_attention_layer, dense_attention_layer
+
+from layers.ContextualAttentionLayer import ContextualAttentionLayer
+from layers.DenseAttentionLayer import DenseAttentionLayer
+from layers.EmbeddingLayer import EmbeddingLayer
 
 
 # dense attention layer
@@ -56,6 +59,9 @@ class MCA:
         self.params = params
 
     def train(self):
+        #TODO: FIX THE IS_TRAINING MODE THING
+        is_training = True
+
         dropout = self.params.get('dropout', 0.0)
         batch_size = self.params.get('batch_size')
         tokens = self.features['tokens']
@@ -68,11 +74,14 @@ class MCA:
 
         activation_fn = MCA.activation_fn_map[self.params.get('activation', 'relu')]
 
-        embedded_tokens = embed_tokens(
-            tokens, self.params['smiles_vocabulary_size'],
-            self.params['smiles_embedding_size'],
-            # name='smiles_embedding'
-        )
+        min_ic50 = self.params.get('min', 0.0)
+        max_ic50 = self.params.get('max', 0.0)
+
+        embedding_layer = EmbeddingLayer(
+            self.params['smiles_vocabulary_size'],
+            self.params['smiles_embedding_size'])
+
+        embedded_tokens = embedding_layer(tokens)
 
         filters = self.params.get('filters')
         kernel_sizes = self.params.get(
@@ -88,12 +97,8 @@ class MCA:
         assert len(filters) + 1 == len(multiheads)
 
         # Filter genes differently for each SMILES kernel size
-        gene_tuple = [
-            dense_attention_layer(
-                genes, return_alphas=True,
-                name='gene_attention_{}'.format(l)
-            ) for l in range(len(multiheads))
-        ]
+        dense_attention_layer = DenseAttentionLayer()
+        gene_tuple = [dense_attention_layer(genes) for head in range(len(multiheads))]
 
         encoded_genes = [tpl[0] for tpl in gene_tuple]
         gene_attention_coefficients_multi, gene_attention_coefficients = (
@@ -130,18 +135,78 @@ class MCA:
         # insert embedded tokens into the first position of the list
         convolved_smiles.insert(0, embedded_tokens)
 
-        #TODO: Implement Contextual attention layer in utils.py
+        contextual_attention_layer = ContextualAttentionLayer(self.params.get('smiles_attention_size', 256))
         encoding_coefficient_tuple = [
             contextual_attention_layer(
-                encoded_genes[layer], convolved_smiles[layer],
-                self.params.get('smiles_attention_size', 256), return_alphas=True,
-                reduce_sequence=self.params.get('smiles_reduction', True),
-                name='contextual_attention_{}'.format(layer)
+                encoded_genes[layer],
+                convolved_smiles[layer]
             ) for layer in range(len(convolved_smiles))
             for _ in range(multiheads[layer])
         ]
 
         # TODO: From now on, we concatenate genes and SMILES
+        attention_coefficients_raw, attention_coefficients = (
+            self.attention_list_to_matrix(
+                encoding_coefficient_tuple, axis=2
+            )
+        )
+        encoded_smiles_list = [t[0] for t in encoding_coefficient_tuple]
+        encoded_smiles = [
+            torch.reshape(
+                encoded_smiles_list[layer],
+                [-1, sequence_length*filters[layer-1]]
+            ) for layer in range(1, len(encoded_smiles_list))
+        ]
+        encoded_smiles.insert(0, torch.reshape(
+            encoded_smiles_list[0],
+            [-1, sequence_length*self.params['smiles_embedding_size']]
+        ))
+        encoded_smiles = torch.cat(
+            encoded_smiles, dim=1
+        )
+        encoded_smiles = encoded_smiles.view(
+            batch_size,
+            sequence_length * (
+                self.params['smiles_embedding_size']*multiheads[0] +
+                sum([a * b for a, b in zip(multiheads[1:])])
+            )
+        )
+
+        # TODO: BATCH NORMALIZATION
+        batch_normalization = nn.BatchNorm1d(encoded_smiles.size()[1])
+        layer = batch_normalization(encoded_smiles)
+
+        for index, dense_hidden_size in enumerate(
+            self.params.get('stacked_dense_hidden_sizes', [])
+        ):
+            layer = nn.Linear(layer.size(-1), dense_hidden_size)
+            layer = activation_fn(layer)
+            layer = nn.BatchNorm1d(layer.size(-1))(layer)
+            layer = F.dropout(layer, p=dropout, training=is_training)
+
+        predictions = torch.squeeze(
+            nn.Linear(layer.size(-1), 1)(layer)
+        )
+
+        prediction_dict = {
+            'gene_attention': gene_attention_coefficients,
+            'smiles_attention': attention_coefficients,
+            'smiles_attention_raw': attention_coefficients_raw,
+            'features': encoded_smiles
+        }
+
+        prediction_dict.update({
+            'IC50': predictions,
+            'IC50_micromolar': torch.exp(
+                predictions * (max_ic50 - min_ic50) + min_ic50
+            ),
+        })
+
+        prediction_dict.update(
+            {'gene_attention_raw': gene_attention_coefficients_multi}
+        )
+
+        return predictions, prediction_dict
 
 
     def attention_list_to_matrix(self, coding_tuple, axis=2):
