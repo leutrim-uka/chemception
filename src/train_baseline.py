@@ -141,7 +141,6 @@ def main(
         gene_expression_processing_parameters=params.get(
             "gene_expression_processing_parameters", {}
         ),
-        device=torch.device(params.get("dataset_device", "cpu")),
         iterate_dataset=False,
     )
 
@@ -170,7 +169,6 @@ def main(
             "gene_expression_processing_parameters",
             train_dataset.gene_expression_dataset.processing,
         ),
-        device=torch.device(params.get("dataset_device", "cpu")),
         iterate_dataset=False,
     )
 
@@ -337,18 +335,20 @@ def main(
         save(save_top_model, "training", "done")
         logger.info("Done with training, models saved, shutting down.")
 
-    if __name__ == "__main__":
-        # parse arguments
-        args = parser.parse_args()
-        # run the training
-        main(
-            args.train_sensitivity_filepath,
-            args.test_sensitivity_filepath,
-            args.gep_filepath,
-            args.smi_filepath,
-            args.gene_filepath,
-            args.smiles_language_filepath,
-            args.model_path,
-            args.params_filepath,
-            args.training_name,
-        )
+if __name__ == "__main__":
+    # parse arguments
+    args = parser.parse_args()
+
+    print("training")
+    # run the training
+    main(
+        args.train_sensitivity_filepath,
+        args.test_sensitivity_filepath,
+        args.gep_filepath,
+        args.smi_filepath,
+        args.gene_filepath,
+        args.smiles_language_filepath,
+        args.model_path,
+        args.params_filepath,
+        args.training_name,
+    )

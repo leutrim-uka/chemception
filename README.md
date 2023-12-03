@@ -19,3 +19,6 @@ The Squeeze and Unsqueeze classes are essentially wrappers around the torch.sque
 In other words, if you’re building a model using nn.Sequential, you would need to use these wrapper classes (or similar) to include squeeze and unsqueeze operations in your model. If you’re just writing a script, and you need to squeeze or unsqueeze a tensor, you can use torch.squeeze and torch.unsqueeze directly.
 
 It’s also worth noting that the Squeeze class will by default remove all dimensions of size 1 from the tensor, while the Unsqueeze class will add a dimension of size 1 at the specified position.
+
+# Reference
+https://github.com/PaccMann/paccmann_predictor/tree/master

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from collections import OrderedDict
-from utils import Unsqueeze, Squeeze
+from utils.utils import Unsqueeze, Squeeze
 
 
 def dense_layer(

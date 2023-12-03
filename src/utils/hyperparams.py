@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch.optim as optim
 
-from loss_functions import (
+from utils.loss_functions import (
     mse_cc_loss,
     correlation_coefficient_loss
 )
