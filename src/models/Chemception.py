@@ -134,3 +134,19 @@ class InceptionResNetC(nn.Module):
         linear = self.linear(concat)
         relu = self.relu(x + linear)
         return relu
+
+
+class Chemception(nn.Module):
+    def __init__(self, in_channels, n_a, n_b, n_c):
+        super(Chemception, self).__init__()
+        blocks = [Stem(in_channels)]
+        blocks.extend([InceptionResNetA(in_channels) for i in range(n_a)])
+        blocks.append(ReductionA(in_channels))
+        blocks.append([InceptionResNetB(in_channels) for i in range(n_b)])
+        blocks.append(ReductionB(in_channels))
+        blocks.append([InceptionResNetC(in_channels)] for i in range(n_c))
+        self.network = nn.Sequential(*blocks)
+
+    def forward(self, x):
+        x = self.network(x)
+        return x
