@@ -1,8 +1,10 @@
+import os
 import time
 import pandas as pd
 import requests
 from rdkit.Chem import MolFromSmiles
 from tqdm import tqdm
+import numpy as np
 
 
 def get_smiles(drug_name: str) -> str | None:
@@ -68,16 +70,27 @@ def smiles2image(smiles: str, width: int, height: int):
 if __name__ == '__main__':
 
     # Name of column where drug names can be found
-    drug_col = 'DRUG_NAME'
+    drug_col = 'drug'
+
 
     # Path to data source
-    file = pd.read_csv('../data/unprocessed/dosage.csv',
-                       delimiter=";",
-                       usecols=[drug_col]
-                       )
+    train_df = pd.read_csv('../data/train.csv',
+                           delimiter=",",
+                           usecols=[drug_col]
+                           )
+
+    test_df = pd.read_csv('../data/test.csv',
+                          delimiter=",",
+                          usecols=[drug_col]
+                          )
+
+    print(train_df.columns)
+
+    drugs = np.array([train_df.drug.unique(), test_df.drug.unique()])
+    drugs = drugs.flatten()
+    unique_drugs = list(set(drugs))
 
     smiles_mapping = {}  # Keys = drug names, values = corresponding SMILES embedding
-    unique_drugs = file[drug_col].unique()  # List of unique drugs in the given dataset
     no_unique_drugs = len(unique_drugs)  # Number of unique drugs
 
     for i, drug in enumerate(tqdm(unique_drugs)):
