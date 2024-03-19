@@ -17,17 +17,19 @@ class InceptionResNetA(nn.Module):
     def __init__(self, in_channels, scale=1.0):
         super(InceptionResNetA, self).__init__()
         self.scale = scale
-        self.branch0 = Conv2d(in_channels, 32, 1, stride=1, padding=0, bias=False)
+        self.branch0 = Conv2d(in_channels, in_channels, 1, stride=1, padding=0, bias=False)
         self.branch1 = nn.Sequential(
-            Conv2d(in_channels, 32, 1, stride=1, padding=0, bias=False),
-            Conv2d(32, 32, 3, stride=1, padding=0, bias=False)
+            Conv2d(in_channels, in_channels, 1, stride=1, padding=0, bias=False),
+            Conv2d(in_channels, in_channels, 3, stride=1, padding=0, bias=False)
         )
         self.branch2 = nn.Sequential(
-            Conv2d(in_channels, 32, 1, stride=1, padding=0, bias=False),
-            Conv2d(32, 48, 3, stride=1, padding=0, bias=False),
-            Conv2d(48, 64, 3, stride=1, padding=0, bias=False)
+            Conv2d(in_channels, in_channels, 1, stride=1, padding=0, bias=False),
+            Conv2d(in_channels, int(1.5*in_channels), 3, stride=1, padding=0, bias=False),
+            Conv2d(int(1.5*in_channels), int(2*in_channels), 3, stride=1, padding=0, bias=False)
         )
-        self.linear = Conv2d(64+32+32, in_channels, 1, stride=1, padding=0, bias=False)
+        self.linear = Conv2d(
+            in_channels+int(1.5*in_channels)+int(2*in_channels),
+            in_channels, 1, stride=1, padding=0, bias=False)
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
@@ -139,12 +141,25 @@ class InceptionResNetC(nn.Module):
 class Chemception(nn.Module):
     def __init__(self, in_channels, n_a, n_b, n_c):
         super(Chemception, self).__init__()
+        # Input: Bx80x80x1
         blocks = [Stem(in_channels)]
+
+        # Input: Bx40x40x1
         blocks.extend([InceptionResNetA(in_channels) for i in range(n_a)])
+
+        # Input: Bx40x40x64
         blocks.append(ReductionA(in_channels))
+
+        # Input: Bx19x19x256
         blocks.append([InceptionResNetB(in_channels) for i in range(n_b)])
+
+        # Input: Bx19x19x640
         blocks.append(ReductionB(in_channels))
+
+        # Input: Bx9x9x3120
         blocks.append([InceptionResNetC(in_channels)] for i in range(n_c))
+        # Output: Bx9x9x7270
+
         self.network = nn.Sequential(*blocks)
 
     def forward(self, x):

@@ -69,29 +69,13 @@ def smiles2image(smiles: str, width: int, height: int):
 
 if __name__ == '__main__':
 
-    # Name of column where drug names can be found
-    drug_col = 'drug'
+    # Read drug names into a list
+    with open('./data/druglist.txt', 'r') as f:
+        unique_drugs = [x.strip() for x in f.readlines()]
 
-
-    # Path to data source
-    train_df = pd.read_csv('../data/train.csv',
-                           delimiter=",",
-                           usecols=[drug_col]
-                           )
-
-    test_df = pd.read_csv('../data/test.csv',
-                          delimiter=",",
-                          usecols=[drug_col]
-                          )
-
-    print(train_df.columns)
-
-    drugs = np.array([train_df.drug.unique(), test_df.drug.unique()])
-    drugs = drugs.flatten()
-    unique_drugs = list(set(drugs))
+    no_unique_drugs = len(unique_drugs)
 
     smiles_mapping = {}  # Keys = drug names, values = corresponding SMILES embedding
-    no_unique_drugs = len(unique_drugs)  # Number of unique drugs
 
     for i, drug in enumerate(tqdm(unique_drugs)):
         response = get_smiles(drug)
@@ -108,4 +92,4 @@ if __name__ == '__main__':
 
     smiles_df = pd.DataFrame(list(smiles_mapping.items()), columns=['drug', 'smiles'])
 
-    smiles_df.to_csv('../data/smiles.csv', index=False)
+    smiles_df.to_csv('./data/new_smiles.csv', index=False)
