@@ -1,4 +1,4 @@
-# Chemception
+# Chemception [in progress]
 This repository is a supplement of the paper on Chemception's applications in predicting cancer cells' response to
 different drugs (compounds).
 
